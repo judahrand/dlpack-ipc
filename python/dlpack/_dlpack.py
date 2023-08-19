@@ -3,7 +3,7 @@ from __future__ import annotations
 import enum
 import ctypes
 import dataclasses
-from typing import Any, Self, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 from .v1 import dlpack_pb2
 
 from .ctypes import (
@@ -41,7 +41,7 @@ class DLPackVersion:
         )
 
     @classmethod
-    def from_proto(cls, proto: dlpack_pb2.DLPackVersion) -> Self:
+    def from_proto(cls, proto: dlpack_pb2.DLPackVersion) -> DLPackVersion:
         return cls(
             major=proto.major,
             minor=proto.minor,
@@ -85,7 +85,7 @@ class DLDevice:
         )
 
     @classmethod
-    def from_proto(cls, proto: dlpack_pb2.DLDevice) -> Self:
+    def from_proto(cls, proto: dlpack_pb2.DLDevice) -> DLDevice:
         return cls(
             device_type=DLDeviceType(proto.device_type),
             device_id=proto.device_id,
@@ -124,7 +124,7 @@ class DLDataType:
         )
 
     @classmethod
-    def from_proto(cls, proto: dlpack_pb2.DLDataType) -> Self:
+    def from_proto(cls, proto: dlpack_pb2.DLDataType) -> DLDataType:
         return cls(
             code=DLDataTypeCode(proto.code),
             bits=proto.bits,
@@ -215,7 +215,7 @@ class DLTensor:
     byte_offset: int
 
     @classmethod
-    def from_dlpack(cls, arr: Any) -> Self:
+    def from_dlpack(cls, arr: Any) -> DLTensor:
         """Convert an array to a DLTensorVersioned."""
         pycapsule = arr.__dlpack__()
         if ctypes.pythonapi.PyCapsule_IsValid(pycapsule, _c_str_dltensor):
@@ -276,7 +276,7 @@ class DLTensor:
         )
 
     @classmethod
-    def from_proto(cls, proto: dlpack_pb2.DLTensor) -> Self:
+    def from_proto(cls, proto: dlpack_pb2.DLTensor) -> DLTensor:
         return cls(
             data=proto.data,
             device=DLDevice.from_proto(proto.device),

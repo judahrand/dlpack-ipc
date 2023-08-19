@@ -1,3 +1,9 @@
 .vscode
+
+# Python
 __pycache__
 .venv
+
+# Rust
+target/
+*.so

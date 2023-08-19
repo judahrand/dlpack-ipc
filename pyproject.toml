@@ -1,0 +1,25 @@
+[build-system]
+requires = ["maturin>=0.15,<0.16"]
+build-backend = "maturin"
+
+[project]
+name = "dlpack"
+requires-python = ">=3.8,<3.12"
+classifiers = [
+    "Programming Language :: Rust",
+    "Programming Language :: Python :: Implementation :: CPython",
+    "Programming Language :: Python :: Implementation :: PyPy",
+]
+dependencies = [
+    "protobuf",
+]
+
+[project.optional-dependencies]
+numpy = ["numpy>=1.22.0"]
+tensorflow = ["tensorflow>=2.2.0"]
+torch = ["torch>=1.10.0"]
+all = ["dlpack[numpy,tensorflow,torch]"]
+
+[tool.maturin]
+python-source = "python"
+features = ["pyo3/extension-module"]
