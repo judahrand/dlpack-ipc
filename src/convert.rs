@@ -1,7 +1,13 @@
 use dlpark::prelude::{ManagedTensor, TensorView};
 use flatbuffers::{FlatBufferBuilder, WIPOffset};
+use bytes::{Bytes, BytesMut, BufMut};
 
 use crate::gen;
+
+pub struct EncodedData {
+    ipc_message: Bytes,
+    data: Bytes,
+}
 
 pub fn dtype_to_fb_offset<'a>(
     fbb: &mut FlatBufferBuilder<'a>,
@@ -47,4 +53,24 @@ pub fn tensor_to_fb(tensor: &ManagedTensor) -> FlatBufferBuilder {
     fbb.finish(root, None);
 
     fbb
+}
+
+pub fn tensor_to_bytes(tensor: &ManagedTensor) -> EncodedData {
+    let fbb = tensor_to_fb(tensor);
+    let ipc_message = fbb.finished_data();
+    let data = unsafe {
+        std::slice::from_raw_parts(tensor.data_ptr() as *mut u8, tensor.data_size())
+    };
+    EncodedData {
+        ipc_message: Bytes::copy_from_slice(ipc_message),
+        data: bytes::Bytes::from_static(data),
+    }
+}
+
+pub fn write_message(encoded_data: &EncodedData) -> Bytes {
+    let mut buf = BytesMut::with_capacity(encoded_data.data.len() + encoded_data.ipc_message.len() + 4);
+    buf.put_i32_le(encoded_data.ipc_message.len() as i32);
+    buf.put(encoded_data.ipc_message.as_ref());
+    buf.put(encoded_data.data.as_ref());
+    buf.freeze()
 }

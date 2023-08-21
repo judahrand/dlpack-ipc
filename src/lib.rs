@@ -1,7 +1,6 @@
 use std::sync::Arc;
 
 use dlpark::prelude::{ManagedTensor, ManagerCtx};
-use dlpark::TensorView;
 use pyo3::prelude::*;
 use pyo3::types::PyBytes;
 
@@ -9,21 +8,15 @@ pub mod convert;
 pub mod gen;
 mod tensor_container;
 
-use crate::convert::tensor_to_fb;
+use crate::convert::{tensor_to_bytes, write_message};
 use crate::gen::Tensor::dlpack::Tensor;
 use crate::tensor_container::TensorContainer;
 
 #[pyfunction]
 fn dlpack_to_bytes(py: Python<'_>, tensor: ManagedTensor) -> PyResult<&PyBytes> {
-    let fbb = tensor_to_fb(&tensor);
-    let metadata = fbb.finished_data();
-    let mut data = (metadata.len() as u32).to_le_bytes().to_vec();
-    data.extend_from_slice(fbb.finished_data());
-    data.extend_from_slice(unsafe {
-        std::slice::from_raw_parts(tensor.data_ptr() as *mut u8, tensor.data_size())
-    });
-    let py_bytes = PyBytes::new_with(py, data.len(), |b: &mut [u8]| Ok(b.copy_from_slice(&data)));
-    py_bytes
+    let encoded = tensor_to_bytes(&tensor);
+    let buf = write_message(&encoded);
+    Ok(unsafe{PyBytes::from_ptr(py, buf.as_ptr(), buf.len())})
 }
 
 #[pyfunction]
