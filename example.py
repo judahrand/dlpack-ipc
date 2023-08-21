@@ -1,21 +1,15 @@
 import dlpack
 import numpy as np
 
-arr = np.random.random((10000, 3, 4))
+arr = np.random.random((3, 4)).astype(dtype=np.float32)
 
-dl_tensor = dlpack.DLTensor.from_dlpack(arr)
+buf = dlpack.serialize_dlpack(arr.__dlpack__())
 
-# Serialize to protobuf
-proto = dl_tensor.to_proto()
+numpy_array = dlpack.bytes_to_numpy(buf)
+print(numpy_array)
 
-# Deserialize from protobuf
-dl_tensor = dlpack.DLTensor.from_proto(proto)
+torch_tensor = dlpack.bytes_to_torch(buf)
+print(torch_tensor)
 
-# Convert to numpy
-dl_tensor.to_numpy()
-
-# Convert to pytorch
-dl_tensor.to_torch()
-
-# Convert to tensorflow
-dl_tensor.to_tensorflow()
+tensorflow_tensor = dlpack.bytes_to_tensorflow(buf)
+print(tensorflow_tensor)

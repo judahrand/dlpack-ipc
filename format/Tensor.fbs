@@ -1,0 +1,17 @@
+namespace dlpack;
+
+table DataType {
+    code: uint8;
+    bits: uint8;
+    lanes: uint16;
+}
+
+table Tensor {
+  ndim: int;
+  dtype: DataType (required);
+  shape: [long] (required);
+  strides: [long];
+  byte_offset: ulong;
+}
+
+root_type Tensor;
