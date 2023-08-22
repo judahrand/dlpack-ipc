@@ -2,8 +2,6 @@ use crate::gen::Tensor::dlpack::DataType as DataTypeFb;
 use dlpark::ffi::{DataType, Device, DeviceType};
 use dlpark::prelude::{CowIntArray, ToTensor};
 
-use std::sync::Arc;
-
 pub struct DataTypeContainer {
     code: u8,
     bits: u8,
@@ -21,7 +19,7 @@ impl From<DataTypeFb<'_>> for DataTypeContainer {
 }
 
 pub struct TensorContainer {
-    data: Arc<Vec<u8>>,
+    data: *const u8,
     dtype: DataTypeContainer,
     shape: Vec<i64>,
     strides: Option<Vec<i64>>,
@@ -30,7 +28,7 @@ pub struct TensorContainer {
 
 impl TensorContainer {
     pub fn new(
-        data: Arc<Vec<u8>>,
+        data: *const u8,
         dtype: DataTypeContainer,
         shape: Vec<i64>,
         strides: Option<Vec<i64>>,
@@ -48,7 +46,7 @@ impl TensorContainer {
 
 impl ToTensor for TensorContainer {
     fn data_ptr(&self) -> *mut std::ffi::c_void {
-        self.data.as_ptr() as *mut std::ffi::c_void
+        self.data as *mut std::ffi::c_void
     }
 
     fn shape(&self) -> CowIntArray {

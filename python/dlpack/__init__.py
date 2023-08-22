@@ -1,8 +1,17 @@
 from typing import Any
 
-from .dlpack import dlpack_to_bytes, bytes_to_dlpack
+from .dlpack import (
+    write_tensor_to_buffer,
+    read_tensor_from_buffer,
+    py_buffer,
+    Buffer,
+    MutableBuffer,
+)
 
 __all__ = [
+    "Buffer",
+    "MutableBuffer",
+    "py_buffer",
     "serialize_dlpack",
     "deserialize_dlpack",
     "bytes_to_numpy",
@@ -11,23 +20,25 @@ __all__ = [
 ]
 
 
-def serialize_dlpack(dlpack: Any) -> bytes:
+def serialize_dlpack(dlpack: Any) -> MutableBuffer:
     if hasattr(dlpack, "__dlpack__"):
         dlpack = dlpack.__dlpack__()
-    return dlpack_to_bytes(dlpack)
+    buf = py_buffer(b"")
+    write_tensor_to_buffer(dlpack, buf)
+    return buf
 
 
-def deserialize_dlpack(buf: bytes) -> Any:
-    return bytes_to_dlpack(buf)
+def deserialize_dlpack(buf: MutableBuffer) -> Any:
+    return read_tensor_from_buffer(buf)
 
 
-def bytes_to_numpy(buf: bytes) -> Any:
+def bytes_to_numpy(buf: MutableBuffer) -> Any:
     import numpy as np
 
     return np.from_dlpack(_FakeArr(deserialize_dlpack(buf)))
 
 
-def bytes_to_torch(buf: bytes) -> Any:
+def bytes_to_torch(buf: MutableBuffer) -> Any:
     import torch
 
     return torch.from_dlpack(deserialize_dlpack(buf))
@@ -44,7 +55,7 @@ class _FakeArr:
         return (1, 0)
 
 
-def bytes_to_tensorflow(buf: bytes) -> Any:
+def bytes_to_tensorflow(buf: MutableBuffer) -> Any:
     import tensorflow as tf
 
     return tf.experimental.dlpack.from_dlpack(deserialize_dlpack(buf))

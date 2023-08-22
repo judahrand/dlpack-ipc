@@ -1,27 +1,39 @@
-use std::sync::Arc;
-
 use dlpark::prelude::{ManagedTensor, ManagerCtx};
 use pyo3::prelude::*;
-use pyo3::types::PyBytes;
 
+mod alloc;
+mod buffer;
+mod bytes;
 pub mod convert;
 pub mod gen;
+pub mod native;
 mod tensor_container;
+pub mod util;
+
+use buffer::MutableBuffer;
 
 use crate::convert::{tensor_to_bytes, write_message};
 use crate::gen::Tensor::dlpack::Tensor;
 use crate::tensor_container::TensorContainer;
 
 #[pyfunction]
-fn dlpack_to_bytes(py: Python<'_>, tensor: ManagedTensor) -> PyResult<&PyBytes> {
-    let encoded = tensor_to_bytes(&tensor);
-    let buf = write_message(&encoded);
-    Ok(unsafe{PyBytes::from_ptr(py, buf.as_ptr(), buf.len())})
+fn py_buffer(_py: Python, obj: &PyAny) -> PyResult<MutableBuffer> {
+    let buf = pyo3::buffer::PyBuffer::<u8>::get(obj).unwrap();
+    let mut res = MutableBuffer::new(0);
+    res.extend_from_slice(&buf.to_vec(_py).unwrap()[..]);
+    Ok(res)
 }
 
 #[pyfunction]
-fn bytes_to_dlpack<'a>(bytes: &PyBytes) -> PyResult<ManagerCtx<TensorContainer>> {
-    let data = bytes.as_bytes();
+fn write_tensor_to_buffer(tensor: ManagedTensor, buffer: &mut MutableBuffer) -> PyResult<()> {
+    let encoded = tensor_to_bytes(&tensor);
+    write_message(&encoded, buffer);
+    Ok(())
+}
+
+#[pyfunction]
+fn read_tensor_from_buffer<'a>(buffer: &MutableBuffer) -> PyResult<ManagerCtx<TensorContainer>> {
+    let data = buffer.as_slice();
     fn pop(barry: &[u8]) -> [u8; 4] {
         barry.try_into().expect("slice with incorrect length")
     }
@@ -29,7 +41,7 @@ fn bytes_to_dlpack<'a>(bytes: &PyBytes) -> PyResult<ManagerCtx<TensorContainer>>
     let metadata = &data[4..metadata_len + 4];
     let tensor = flatbuffers::root::<Tensor>(metadata).unwrap();
     let tensor_container = TensorContainer::new(
-        Arc::new(data[metadata_len + 4..].to_vec()),
+        data[metadata_len + 4..].as_ptr(),
         tensor.dtype().into(),
         tensor.shape().into_iter().map(|x| x).collect::<Vec<i64>>(),
         match tensor.strides() {
@@ -43,7 +55,10 @@ fn bytes_to_dlpack<'a>(bytes: &PyBytes) -> PyResult<ManagerCtx<TensorContainer>>
 
 #[pymodule]
 fn dlpack(_py: Python, m: &PyModule) -> PyResult<()> {
-    m.add_function(wrap_pyfunction!(dlpack_to_bytes, m)?)?;
-    m.add_function(wrap_pyfunction!(bytes_to_dlpack, m)?)?;
+    m.add_function(wrap_pyfunction!(py_buffer, m)?)?;
+    m.add_function(wrap_pyfunction!(write_tensor_to_buffer, m)?)?;
+    m.add_function(wrap_pyfunction!(read_tensor_from_buffer, m)?)?;
+    m.add_class::<buffer::Buffer>()?;
+    m.add_class::<buffer::MutableBuffer>()?;
     Ok(())
 }

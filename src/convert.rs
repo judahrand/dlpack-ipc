@@ -1,8 +1,8 @@
+use bytes::Bytes;
 use dlpark::prelude::{ManagedTensor, TensorView};
 use flatbuffers::{FlatBufferBuilder, WIPOffset};
-use bytes::{Bytes, BytesMut, BufMut};
 
-use crate::gen;
+use crate::{buffer::MutableBuffer, gen};
 
 pub struct EncodedData {
     ipc_message: Bytes,
@@ -58,19 +58,16 @@ pub fn tensor_to_fb(tensor: &ManagedTensor) -> FlatBufferBuilder {
 pub fn tensor_to_bytes(tensor: &ManagedTensor) -> EncodedData {
     let fbb = tensor_to_fb(tensor);
     let ipc_message = fbb.finished_data();
-    let data = unsafe {
-        std::slice::from_raw_parts(tensor.data_ptr() as *mut u8, tensor.data_size())
-    };
+    let data =
+        unsafe { std::slice::from_raw_parts(tensor.data_ptr() as *mut u8, tensor.data_size()) };
     EncodedData {
         ipc_message: Bytes::copy_from_slice(ipc_message),
         data: bytes::Bytes::from_static(data),
     }
 }
 
-pub fn write_message(encoded_data: &EncodedData) -> Bytes {
-    let mut buf = BytesMut::with_capacity(encoded_data.data.len() + encoded_data.ipc_message.len() + 4);
-    buf.put_i32_le(encoded_data.ipc_message.len() as i32);
-    buf.put(encoded_data.ipc_message.as_ref());
-    buf.put(encoded_data.data.as_ref());
-    buf.freeze()
+pub fn write_message(encoded_data: &EncodedData, buffer: &mut MutableBuffer) -> () {
+    buffer.extend_from_slice(&(encoded_data.ipc_message.len() as i32).to_le_bytes());
+    buffer.extend_from_slice(encoded_data.ipc_message.as_ref());
+    buffer.extend_from_slice(encoded_data.data.as_ref());
 }
