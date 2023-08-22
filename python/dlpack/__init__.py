@@ -1,5 +1,9 @@
 from typing import Any
 
+import torch
+import numpy as np
+import tensorflow as tf
+
 from .dlpack import (
     write_tensor_to_buffer,
     read_tensor_from_buffer,
@@ -33,14 +37,10 @@ def deserialize_dlpack(buf: MutableBuffer) -> Any:
 
 
 def bytes_to_numpy(buf: MutableBuffer) -> Any:
-    import numpy as np
-
     return np.from_dlpack(_FakeArr(deserialize_dlpack(buf)))
 
 
 def bytes_to_torch(buf: MutableBuffer) -> Any:
-    import torch
-
     return torch.from_dlpack(deserialize_dlpack(buf))
 
 
@@ -56,6 +56,4 @@ class _FakeArr:
 
 
 def bytes_to_tensorflow(buf: MutableBuffer) -> Any:
-    import tensorflow as tf
-
     return tf.experimental.dlpack.from_dlpack(deserialize_dlpack(buf))
