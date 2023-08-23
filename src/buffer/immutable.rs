@@ -14,15 +14,13 @@
 // KIND, either express or implied.  See the License for the
 // specific language governing permissions and limitations
 // under the License.
-use pyo3::prelude::*;
-
 use std::alloc::Layout;
 use std::fmt::Debug;
 use std::iter::FromIterator;
 use std::ptr::NonNull;
 use std::sync::Arc;
 
-use crate::alloc::{Allocation, Deallocation, ALIGNMENT};
+use crate::alloc::{Allocation, Deallocation};
 use crate::util::bit_chunk_iterator::{BitChunks, UnalignedBitChunk};
 use crate::{bytes::Bytes, native::ArrowNativeType};
 
@@ -31,7 +29,6 @@ use super::MutableBuffer;
 
 /// Buffer represents a contiguous memory region that can be shared with other buffers and across
 /// thread boundaries.
-#[pyclass]
 #[derive(Clone, Debug)]
 pub struct Buffer {
     /// the internal byte buffer.
@@ -86,26 +83,6 @@ impl Buffer {
         let mut buffer = MutableBuffer::with_capacity(capacity);
         buffer.extend_from_slice(slice);
         buffer.into()
-    }
-
-    /// Creates a buffer from an existing aligned memory region (must already be byte-aligned), this
-    /// `Buffer` will free this piece of memory when dropped.
-    ///
-    /// # Arguments
-    ///
-    /// * `ptr` - Pointer to raw parts
-    /// * `len` - Length of raw parts in **bytes**
-    /// * `capacity` - Total allocated memory for the pointer `ptr`, in **bytes**
-    ///
-    /// # Safety
-    ///
-    /// This function is unsafe as there is no guarantee that the given pointer is valid for `len`
-    /// bytes. If the `ptr` and `capacity` come from a `Buffer`, then this is guaranteed.
-    #[deprecated(note = "Use From<Vec<T>>")]
-    pub unsafe fn from_raw_parts(ptr: NonNull<u8>, len: usize, capacity: usize) -> Self {
-        assert!(len <= capacity);
-        let layout = Layout::from_size_align(capacity, ALIGNMENT).unwrap();
-        Buffer::build_with_arguments(ptr, len, Deallocation::Standard(layout))
     }
 
     /// Creates a buffer from an existing memory region. Ownership of the memory is tracked via reference counting

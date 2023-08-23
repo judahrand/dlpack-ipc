@@ -8,12 +8,12 @@ from .dlpack import (
     write_tensor_to_buffer,
     read_tensor_from_buffer,
     py_buffer,
-    Buffer,
+    PyBuffer,
     MutableBuffer,
 )
 
 __all__ = [
-    "Buffer",
+    "PyBuffer",
     "MutableBuffer",
     "py_buffer",
     "serialize_dlpack",
@@ -22,26 +22,6 @@ __all__ = [
     "bytes_to_torch",
     "bytes_to_tensorflow",
 ]
-
-
-def serialize_dlpack(dlpack: Any) -> MutableBuffer:
-    if hasattr(dlpack, "__dlpack__"):
-        dlpack = dlpack.__dlpack__()
-    buf = py_buffer(b"")
-    write_tensor_to_buffer(dlpack, buf)
-    return buf
-
-
-def deserialize_dlpack(buf: MutableBuffer) -> Any:
-    return read_tensor_from_buffer(buf)
-
-
-def bytes_to_numpy(buf: MutableBuffer) -> Any:
-    return np.from_dlpack(_FakeArr(deserialize_dlpack(buf)))
-
-
-def bytes_to_torch(buf: MutableBuffer) -> Any:
-    return torch.from_dlpack(deserialize_dlpack(buf))
 
 
 class _FakeArr:
@@ -53,6 +33,24 @@ class _FakeArr:
 
     def __dlpack_device__(self) -> tuple[int, int]:
         return (1, 0)
+
+
+def serialize_dlpack(dlpack: Any) -> PyBuffer:
+    if hasattr(dlpack, "__dlpack__"):
+        dlpack = dlpack.__dlpack__()
+    return write_tensor_to_buffer(dlpack)
+
+
+def deserialize_dlpack(buf: bytes) -> Any:
+    return read_tensor_from_buffer(py_buffer(buf))
+
+
+def bytes_to_numpy(buf: bytes) -> Any:
+    return np.from_dlpack(_FakeArr(deserialize_dlpack(buf)))
+
+
+def bytes_to_torch(buf: bytes) -> Any:
+    return torch.from_dlpack(deserialize_dlpack(buf))
 
 
 def bytes_to_tensorflow(buf: MutableBuffer) -> Any:

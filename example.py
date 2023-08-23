@@ -13,7 +13,7 @@ arr = np.random.random((3, 4)).astype(dtype=np.float32)
 
 dlpack.serialize_dlpack(np.array([]).__dlpack__())  # Force numpy to initialize
 ts = time.perf_counter()
-buf = dlpack.serialize_dlpack(arr.__dlpack__())
+buf = dlpack.serialize_dlpack(arr.__dlpack__()).to_pybytes()
 duration = (time.perf_counter() - ts) * 1e6
 print(f"Serialization took: {duration:.3f} us")
 
