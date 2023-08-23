@@ -1,3 +1,4 @@
+use crate::buffer::Buffer;
 use crate::gen::Tensor::dlpack::DataType as DataTypeFb;
 use dlpark::ffi::{DataType, Device, DeviceType};
 use dlpark::prelude::{CowIntArray, ToTensor};
@@ -19,7 +20,7 @@ impl From<DataTypeFb<'_>> for DataTypeContainer {
 }
 
 pub struct TensorContainer {
-    data: *const u8,
+    data: Buffer,
     dtype: DataTypeContainer,
     shape: Vec<i64>,
     strides: Option<Vec<i64>>,
@@ -28,7 +29,7 @@ pub struct TensorContainer {
 
 impl TensorContainer {
     pub fn new(
-        data: *const u8,
+        data: Buffer,
         dtype: DataTypeContainer,
         shape: Vec<i64>,
         strides: Option<Vec<i64>>,
@@ -46,7 +47,7 @@ impl TensorContainer {
 
 impl ToTensor for TensorContainer {
     fn data_ptr(&self) -> *mut std::ffi::c_void {
-        self.data as *mut std::ffi::c_void
+        self.data.as_ptr() as *mut std::ffi::c_void
     }
 
     fn shape(&self) -> CowIntArray {
